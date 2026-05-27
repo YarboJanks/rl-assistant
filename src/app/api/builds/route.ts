@@ -1,6 +1,5 @@
-import { getServerSession } from "next-auth"
+import { auth } from "@/auth"
 import { NextResponse } from "next/server"
-import { authOptions } from "@/lib/auth"
 import { supabaseAdmin } from "@/lib/supabase"
 import { z } from "zod"
 
@@ -23,13 +22,13 @@ const createBuildSchema = z.object({
 })
 
 export async function GET() {
-  const session = await getServerSession(authOptions)
+  const session = await auth()
   if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
 
   const { data, error } = await supabaseAdmin
     .from("builds")
     .select("*")
-    .eq("owner_id", session.user.discordId)
+    .eq("owner_id", session.user.id)
     .order("created_at", { ascending: false })
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
@@ -37,7 +36,7 @@ export async function GET() {
 }
 
 export async function POST(req: Request) {
-  const session = await getServerSession(authOptions)
+  const session = await auth()
   if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
 
   const body = await req.json()
@@ -46,7 +45,7 @@ export async function POST(req: Request) {
 
   const { data, error } = await supabaseAdmin
     .from("builds")
-    .insert({ ...parsed.data, owner_id: session.user.discordId })
+    .insert({ ...parsed.data, owner_id: session.user.id })
     .select()
     .single()
 
